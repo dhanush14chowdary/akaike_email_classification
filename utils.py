@@ -1,32 +1,12 @@
-# pipeline.py
-# Integrates PII masking and classification
+# utils.py
+# Utility functions for PII masking
 # Author: Dhanush
 # Date: April 19, 2025
 
 import spacy
 import re
-import joblib
-import logging
 from typing import List, Dict
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-try:
-    nlp = spacy.load("en_core_web_sm", disable=["parser", "tagger", "lemmatizer"])
-    logger.info("Spacy model loaded successfully")
-except Exception as e:
-    logger.error(f"Error loading Spacy model: {e}")
-    exit(1)
-
-try:
-    model = joblib.load("rf_model.pkl")
-    logger.info("Random Forest model loaded successfully")
-except Exception as e:
-    logger.error(f"Error loading model: {e}")
-    exit(1)
-
-# Regex patterns for PII (strict to avoid overlaps)
 phone_pattern = r'\b(?:\+?\d{1,4}[-.\s]?)?(?:\(\d{3}\))?[-.\s]?\d{3}[-.\s]?\d{4}\b'
 email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 name_pattern = r'\b[A-Z][a-z]{2,}\s[A-Z][a-z]{2,}\b'
@@ -118,26 +98,3 @@ def mask_pii(text: str, nlp) -> tuple[str, List[Dict]]:
 
     masked_text = '\n'.join(masked_lines)
     return masked_text, masked_entities
-
-def classify_email(email: str) -> Dict:
-    logger.info("Masking email...")
-    masked_email, masked_entities = mask_pii(email, nlp)
-    
-    logger.info("Classifying email...")
-    prediction = model.predict([masked_email])[0]
-    
-    return {
-        "input_email_body": email,
-        "list_of_masked_entities": masked_entities,
-        "masked_email": masked_email,
-        "category_of_the_email": prediction
-    }
-
-if __name__ == "__main__":
-    test_email = """
-    Subject: Test Email
-    Hello, my name is John Doe, contact me at john.doe@example.com or +82-2-3456-7890.
-    My DOB is 01/01/1990, Aadhar: 1234 5678 9012, Card: 1234-5678-9012-3456, CVV: 123, Expiry: 12/25.
-    """
-    result = classify_email(test_email)
-    print(result)
